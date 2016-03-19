@@ -1,12 +1,6 @@
 Rails.application.routes.draw do
   get 'google/playlists'
-
-  get 'google/playlist_entries'
-
   get 'spotify/playlists'
-
-  get 'play/playlists'
-  get 'play/playlist_entries'
 
   root 'welcome#index'
   # get '/auth/spotify/callback', to: 'users#authenticate_spotify'

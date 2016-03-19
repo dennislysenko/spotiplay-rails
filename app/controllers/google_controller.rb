@@ -16,18 +16,14 @@ class GoogleController < ApplicationController
             google_id: playlist['id'],
             should_sync: false
         })
-        current_user!.stored_playlists.create!(attributes)
+        current_user!.google_playlists.create!(attributes)
       else
         stored_playlist.update!(attributes)
       end
     end
 
-    stored_playlists = current_user!.google_playlists
+    stored_playlists = current_user!.google_playlists.order(name: :asc)
 
-
-  end
-
-  def playlist_entries
-    render json: current_user!.play.get('playlist_entries')
+    render json: { playlists: stored_playlists.map { |playlist| GooglePlaylistSerializer.new(playlist).as_json } }
   end
 end

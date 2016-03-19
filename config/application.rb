@@ -22,6 +22,10 @@ module SpotiplayRails
 
     # Do not swallow errors in after_commit/after_rollback callbacks.
     config.active_record.raise_in_transactional_callbacks = true
+
+    # Things I added
+    config.autoload_paths << Rails.root.join('lib')
+    config.autoload_paths << Rails.root.join('serializers')
   end
 end
 
