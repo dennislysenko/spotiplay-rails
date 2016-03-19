@@ -1,6 +1,12 @@
 Rails.application.routes.draw do
-  get 'welcome/index'
-
   root 'welcome#index'
-  get '/auth/facebook/callback', to: 'users#authenticate'
+  # get '/auth/spotify/callback', to: 'users#authenticate_spotify'
+  # get 'users/authenticate_google'
+  get 'spotify_callback', to: 'users#spotify_callback'
+  get 'spotify_test', to: 'welcome#spotify_test'
+  resources :users do
+    get 'login_spotify', on: :collection
+    get 'authenticate_spotify', on: :collection
+    get 'authenticate_google', on: :collection
+  end
 end

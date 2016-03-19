@@ -50,3 +50,5 @@ gem 'dotenv-rails'
 gem 'omniauth'
 gem 'omniauth-spotify'
 gem 'rspotify'
+
+gem 'rest-client'

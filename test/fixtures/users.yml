@@ -1,0 +1,11 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  spotify_auth_hash: MyText
+  google_email: MyString
+  google_password_encrypted: MyString
+
+two:
+  spotify_auth_hash: MyText
+  google_email: MyString
+  google_password_encrypted: MyString

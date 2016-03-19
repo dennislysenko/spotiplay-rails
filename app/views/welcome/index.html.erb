@@ -1,2 +1,20 @@
-<h1>Welcome#index</h1>
-<p>Find me in app/views/welcome/index.html.erb</p>
+<% if @logged_in %>
+    <% if @current_user.spotify_access_token.nil? %>
+        Required: <%= link_to 'Login with Spotify', '/auth/spotify' %>
+    <% elsif @current_user.google_email.nil? %>
+        Required: Attach your google account
+        <%= form_tag(url_for(controller: 'users', action: 'authenticate_google'), method: 'post') do %>
+            <%= label_tag :email, 'Email' %>
+            <%= text_field_tag :email %>
+            <br />
+            <%= label_tag :password, 'Password' %>
+            <%= password_field_tag :password %>
+            <br />
+            Login info will be stored AES-256 encrypted.
+            <br />
+            <%= submit_tag('Attach') %>
+        <% end %>
+    <% end %>
+<% else %>
+    Start: <%= link_to 'Login with Spotify', controller: 'users', action: 'login_spotify' %>
+<% end %>
