@@ -24,3 +24,5 @@ module SpotiplayRails
     config.active_record.raise_in_transactional_callbacks = true
   end
 end
+
+RSpotify.authenticate(ENV['SPOTIFY_CLIENT_ID'], ENV['SPOTIFY_CLIENT_SECRET'])

@@ -11,7 +11,35 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160319192724) do
+ActiveRecord::Schema.define(version: 20160319213047) do
+
+  create_table "google_playlists", force: :cascade do |t|
+    t.string   "google_id"
+    t.string   "name"
+    t.string   "description"
+    t.text     "google_json"
+    t.datetime "created_at",          null: false
+    t.datetime "updated_at",          null: false
+    t.integer  "user_id"
+    t.boolean  "should_sync"
+    t.integer  "spotify_playlist_id"
+  end
+
+  add_index "google_playlists", ["spotify_playlist_id"], name: "index_google_playlists_on_spotify_playlist_id"
+  add_index "google_playlists", ["user_id"], name: "index_google_playlists_on_user_id"
+
+  create_table "spotify_playlists", force: :cascade do |t|
+    t.integer  "user_id"
+    t.integer  "google_playlist_id"
+    t.string   "name"
+    t.text     "spotify_json"
+    t.string   "spotify_id"
+    t.datetime "created_at",         null: false
+    t.datetime "updated_at",         null: false
+  end
+
+  add_index "spotify_playlists", ["google_playlist_id"], name: "index_spotify_playlists_on_google_playlist_id"
+  add_index "spotify_playlists", ["user_id"], name: "index_spotify_playlists_on_user_id"
 
   create_table "users", force: :cascade do |t|
     t.string   "google_email"

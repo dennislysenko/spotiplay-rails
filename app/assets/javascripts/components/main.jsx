@@ -6,7 +6,7 @@ var Main = React.createClass({
     },
 
     componentDidMount() {
-        $.get('/play_test', response => {
+        $.get('/play/playlists', response => {
             this.setState({play_playlists: response.playlists});
         });
     },
@@ -21,13 +21,13 @@ var Main = React.createClass({
 
 var PlaylistList = React.createClass({
     render() {
-        let playlistItems = this.props.playlists.map(playlist => <PlaylistItem playlist={playlist}/>);
+        let playlistItems = this.props.playlists.map(playlist => <PlaylistItem key={this.props.playlist.id} playlist={playlist}/>);
         return <div>{playlistItems}</div>
     }
 });
 
 var PlaylistItem = React.createClass({
     render() {
-        return <div key={this.props.playlist.id}>{this.props.playlist.name}</div>
+        return <div>{this.props.playlist.name}</div>
     }
 });

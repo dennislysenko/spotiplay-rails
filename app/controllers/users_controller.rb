@@ -84,10 +84,6 @@ class UsersController < ApplicationController
 
   protected
 
-  def encrypt(text)
-
-  end
-
   def upsert_user!(search_hash, attributes_hash)
     user = current_user? || User.find_by(search_hash)
     if user.nil?
@@ -96,12 +92,6 @@ class UsersController < ApplicationController
       user.update!(search_hash.merge(attributes_hash))
     end
     user
-  end
-
-  def current_user?
-    if User.exists? session[:user_id]
-      User.find session[:user_id]
-    end
   end
 
   def spotify_redirect_uri

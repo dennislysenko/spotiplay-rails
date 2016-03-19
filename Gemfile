@@ -54,3 +54,5 @@ gem 'rspotify'
 gem 'rest-client'
 
 gem 'react-rails', '~> 1.6.0'
+
+gem 'active_model_serializers'
