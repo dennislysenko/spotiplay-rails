@@ -5,10 +5,7 @@ class WelcomeController < ApplicationController
   end
 
   def spotify_test
-    user = RSpotify::User.new(current_user.rspotify_hash)
-    render json: user.playlists
-  rescue Exception => e
-    raise "fuck"
+    render json: current_user.rspotify.playlists
   end
 
   protected

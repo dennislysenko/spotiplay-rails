@@ -7,4 +7,8 @@ class User < ActiveRecord::Base
         'info' => { 'id' => spotify_id }
     }
   end
+
+  def rspotify
+    @rspotify ||= RSpotify::User.new(rspotify_hash)
+  end
 end
