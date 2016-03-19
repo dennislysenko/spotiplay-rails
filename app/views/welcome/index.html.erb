@@ -6,14 +6,16 @@
         <%= form_tag(url_for(controller: 'users', action: 'authenticate_google'), method: 'post') do %>
             <%= label_tag :email, 'Email' %>
             <%= text_field_tag :email %>
-            <br />
+            <br/>
             <%= label_tag :password, 'Password' %>
             <%= password_field_tag :password %>
-            <br />
+            <br/>
             Login info will be stored AES-256 encrypted.
-            <br />
+            <br/>
             <%= submit_tag('Attach') %>
         <% end %>
+    <% else %>
+        You're fully set up. wooh
     <% end %>
 <% else %>
     Start: <%= link_to 'Login with Spotify', controller: 'users', action: 'login_spotify' %>

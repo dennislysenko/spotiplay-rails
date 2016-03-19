@@ -68,28 +68,40 @@ class UsersController < ApplicationController
   end
 
   def authenticate_google
-    user = upsert_user!({ google_email: params[:google_email] }, { google_password_encrypted: encrypt(params[:google_password]) })
+    cipher = OpenSSL::Cipher::AES256.new(:CTR)
+    cipher.encrypt
+    p ENV['ENCRYPTION_KEY']
+    cipher.key = Base64.decode64(ENV['ENCRYPTION_KEY'])
+    iv = cipher.random_iv
+    cipher.iv = iv
+    encrypted_password = Base64.encode64(cipher.update(params[:password]) + cipher.final)
+
+    user = upsert_user!({ google_email: params[:email] }, { google_password_encrypted: encrypted_password, google_password_iv: Base64.encode64(iv) })
+
     session[:user_id] = user.id
-    redirect_to 'welcome#index'
+    redirect_to controller: 'welcome', action: 'index'
   end
 
   protected
 
   def encrypt(text)
-    cipher = OpenSSL::Cipher.AES256.new(:CTR)
-    cipher.encrypt
-    cipher.key = ENV['ENCRYPTION_KEY']
-    cipher.update(text) + cipher.final
+
   end
 
   def upsert_user!(search_hash, attributes_hash)
-    user = User.find_by(search_hash)
+    user = current_user? || User.find_by(search_hash)
     if user.nil?
       user = User.create!(search_hash.merge(attributes_hash))
     else
-      user.update!(attributes_hash)
+      user.update!(search_hash.merge(attributes_hash))
     end
     user
+  end
+
+  def current_user?
+    if User.exists? session[:user_id]
+      User.find session[:user_id]
+    end
   end
 
   def spotify_redirect_uri

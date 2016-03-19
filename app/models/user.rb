@@ -11,4 +11,24 @@ class User < ActiveRecord::Base
   def rspotify
     @rspotify ||= RSpotify::User.new(rspotify_hash)
   end
+
+  class GooglePlayInterface
+    def initialize(user)
+      raise if user.nil?
+      @user = user
+    end
+
+    def get(resource)
+      JSON.parse(RestClient.get("#{ENV['NODE_HOST']}/#{resource}?#{auth.to_query}"))
+    end
+
+    private
+    def auth
+      { email: @user.google_email, password: @user.google_password_encrypted, iv: @user.google_password_iv }
+    end
+  end
+
+  def play
+    @play ||= GooglePlayInterface.new(self)
+  end
 end

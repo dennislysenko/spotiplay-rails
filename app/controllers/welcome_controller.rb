@@ -8,6 +8,10 @@ class WelcomeController < ApplicationController
     render json: current_user.rspotify.playlists
   end
 
+  def play_test
+    render json: current_user.play.get('playlists')
+  end
+
   protected
 
   def current_user

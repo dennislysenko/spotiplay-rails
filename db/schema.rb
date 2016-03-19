@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160319183856) do
+ActiveRecord::Schema.define(version: 20160319192724) do
 
   create_table "users", force: :cascade do |t|
     t.string   "google_email"
@@ -21,6 +21,7 @@ ActiveRecord::Schema.define(version: 20160319183856) do
     t.string   "spotify_id"
     t.string   "spotify_access_token"
     t.string   "spotify_refresh_token"
+    t.string   "google_password_iv"
   end
 
 end
