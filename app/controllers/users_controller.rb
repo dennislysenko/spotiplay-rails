@@ -58,14 +58,15 @@ class UsersController < ApplicationController
     end
   end
 
-  def authenticate_spotify
-    auth_hash = request.env['omniauth.auth']
-    uid = auth_hash['uid']
-
-    user = upsert_user!({ spotify_id: uid }, { spotify_auth_hash: auth_hash })
-    session[:user_id] = user.id
-    redirect_to 'welcome#index'
-  end
+  #defunct omniauth spotify auth
+  # def authenticate_spotify
+  #   auth_hash = request.env['omniauth.auth']
+  #   uid = auth_hash['uid']
+  #
+  #   user = upsert_user!({ spotify_id: uid }, { spotify_auth_hash: auth_hash })
+  #   session[:user_id] = user.id
+  #   redirect_to 'welcome#index'
+  # end
 
   def authenticate_google
     cipher = OpenSSL::Cipher::AES256.new(:CTR)

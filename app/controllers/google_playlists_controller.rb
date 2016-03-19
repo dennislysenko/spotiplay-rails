@@ -1,5 +1,5 @@
-class GoogleController < ApplicationController
-  def playlists
+class GooglePlaylistsController < ApplicationController
+  def index
     # Load playlists from google play, make sure our local db is up to date with them
     playlists = current_user!.play.get('playlists')['playlists']
     stored_playlists = current_user!.google_playlists
@@ -24,6 +24,18 @@ class GoogleController < ApplicationController
 
     stored_playlists = current_user!.google_playlists.order(name: :asc)
 
-    render json: { playlists: stored_playlists.map { |playlist| GooglePlaylistSerializer.new(playlist).as_json } }
+    render json: { playlists: stored_playlists.map { |playlist| GooglePlaylistSerializer.new(playlist, root: false).as_json } }
+  end
+
+  def update
+    @playlist = GooglePlaylist.find(params[:id])
+    @playlist.update!(update_params)
+    render json: GooglePlaylistSerializer.new(@playlist)
+  end
+
+  private
+
+  def update_params
+    params.require(:google_playlist).permit(:should_sync)
   end
 end
