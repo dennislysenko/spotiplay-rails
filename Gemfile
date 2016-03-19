@@ -52,3 +52,5 @@ gem 'omniauth-spotify'
 gem 'rspotify'
 
 gem 'rest-client'
+
+gem 'react-rails', '~> 1.6.0'

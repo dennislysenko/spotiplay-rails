@@ -15,7 +15,7 @@
             <%= submit_tag('Attach') %>
         <% end %>
     <% else %>
-        You're fully set up. wooh
+        <%= react_component('Main') %>
     <% end %>
 <% else %>
     Start: <%= link_to 'Login with Spotify', controller: 'users', action: 'login_spotify' %>
