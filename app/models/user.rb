@@ -1,5 +1,6 @@
 class User < ActiveRecord::Base
   has_many :google_playlists, dependent: :destroy
+  has_many :spotify_playlists, dependent: :destroy
 
   # noinspection RubyStringKeysInHashInspection
   def rspotify_hash
