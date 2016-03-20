@@ -5,18 +5,40 @@ class Syncer
 
   def perform
     errors = []
-    GooglePlaylist.to_sync.each do |playlist|
-      error = sync_playlist(playlist)
 
-      if error.present?
-        errors << error
+    User.all.each do |user|
+      playlists = user.google_playlists.to_sync
+      next if playlists.empty?
+
+      # load playlist entries for user
+      response = user.play.get('playlist_entries')
+      unorganized_entries = response['entries']
+
+      playlists_to_entries = {} # playlists to arrays of their entries
+
+      unorganized_entries.each do |entry|
+        playlist_id = entry['playlistId']
+        playlist = playlists.find_by(google_id: playlist_id)
+
+        next if playlist.nil? # not sure, but we're dealing with an undocumented API here so let's just be safe...
+
+        playlists_to_entries[playlist] ||= []
+        playlists_to_entries[playlist] << entry
+      end
+
+      playlists_to_entries.each do |playlist, entries|
+        error = sync_playlist_returning_error(playlist, entries)
+
+        if error.present?
+          errors << error
+        end
       end
     end
 
     raise errors.first unless errors.empty? # TODO: raise all the errors
   end
 
-  def sync_playlist(playlist)
+  def sync_playlist_returning_error(playlist, entries)
     if playlist.spotify_playlist.nil?
       rspotify_playlist = playlist.user.rspotify.create_playlist!(playlist.name)
       playlist.spotify_playlist = playlist.user.spotify_playlists.create!(
@@ -27,6 +49,9 @@ class Syncer
     end
 
     # sync tracks
+    entries.each do |entry|
+
+    end
 
     return nil
   rescue => e
