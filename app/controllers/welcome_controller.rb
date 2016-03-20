@@ -10,7 +10,7 @@ class WelcomeController < ApplicationController
   end
 
   def play_test
-    render json: current_user!.play.get('playlists')
+    render json: current_user!.play.get('all_tracks')
   end
 
   protected
