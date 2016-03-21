@@ -103,7 +103,8 @@ class Syncer
       rspotify_playlist = all_spotify_playlists.find { |list| list.id == playlist.spotify_playlist.spotify_id }
     end
 
-    raise if playlist.spotify_playlist.nil?
+    raise "nil spotify_playlist (the one in db) for playlist #{playlist}" if playlist.spotify_playlist.nil?
+    raise "nil rspotify_playlist (actual one on spotify) for playlist #{playlist}" if rspotify_playlist.nil?
 
     updated_spotify_tracks = rspotify_playlist.all_tracks
 
