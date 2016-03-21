@@ -256,7 +256,7 @@ class Syncer
     end
 
     return nil
-  rescue => e
+  rescue Exception => e
     return e
   end
 
