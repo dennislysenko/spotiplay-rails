@@ -64,6 +64,7 @@ gem 'sidekiq-cron'
 gem 'sinatra' # for sidekiq web ui
 
 # deployment
+gem 'unicorn'
 gem 'capistrano'
 gem 'capistrano-ext', require: false
 gem 'capistrano-rails', require: false
