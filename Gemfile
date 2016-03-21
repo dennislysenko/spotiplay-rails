@@ -62,3 +62,12 @@ gem 'sidekiq', '3.5.4'
 gem 'sidekiq-failures', '0.4.5' # for viewing failed jobs in sidekiq web UI
 gem 'sidekiq-cron'
 gem 'sinatra' # for sidekiq web ui
+
+# deployment
+gem 'capistrano'
+gem 'capistrano-ext', require: false
+gem 'capistrano-rails', require: false
+gem 'capistrano-sidekiq', require: false
+gem 'capistrano-rvm', require: false
+gem 'capistrano-unicorn-nginx', require: false
+gem 'capistrano-touch-linked-files', require: false
