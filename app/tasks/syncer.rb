@@ -10,6 +10,13 @@ class Syncer
   # syncs all google and spotify playlists in the library with each other.
   # if draft_mode is true, will do a "dress rehearsal" runthrough of the sync process without modifying anything.
   def perform(draft_mode=false)
+    if @@performing
+      warn 'syncer already appears to be performing'
+      return
+    end
+
+    @@performing = true
+
     self.draft_mode = draft_mode
     errors = []
 
@@ -65,7 +72,12 @@ class Syncer
       end
     end
 
+    @@performing = false
+
     raise errors.first unless errors.empty? # TODO: raise all the errors
+  rescue Exception => e
+    @@performing = false
+    raise e
   end
 
   def sync_playlist_returning_error(playlist, entries, all_spotify_playlists)
