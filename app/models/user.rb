@@ -25,6 +25,7 @@ class User < ActiveRecord::Base
     end
 
     def post(resource, payload)
+      puts "hitting #{resource} with #{payload.merge(auth)}"
       JSON.parse(RestClient.post("#{ENV['NODE_HOST']}/#{resource}", payload.merge(auth)))
     end
 

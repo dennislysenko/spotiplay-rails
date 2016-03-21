@@ -7,7 +7,9 @@ class Syncer
     draft_mode
   end
 
-  def perform(draft_mode)
+  # syncs all google and spotify playlists in the library with each other.
+  # if draft_mode is true, will do a "dress rehearsal" runthrough of the sync process without modifying anything.
+  def perform(draft_mode=false)
     self.draft_mode = draft_mode
     errors = []
 
@@ -65,6 +67,7 @@ class Syncer
     playlist.user.rspotify
 
     # first ensure a companion spotify playlist exists
+    # TODO: make this treat a spotify playlist with the same name as a companion playlist automatically
     puts "syncing playlist #{playlist.name}"
     if playlist.spotify_playlist.nil?
       rspotify_playlist = playlist.user.rspotify.create_playlist!(playlist.name)
@@ -156,32 +159,7 @@ class Syncer
         warn "couldn't find match for google track #{title} by #{artist} (from #{album})"
       else
         tracks_to_add_to_spotify << spotify_track
-
-        unless draft_mode?
-          ActiveRecord::Base.transaction do
-            google_track = playlist.google_tracks.create(
-                google_json: entry,
-                google_entry_id: entry['id'],
-                google_id: entry['track']['id'],
-                title: title,
-                artist: artist,
-                album: album,
-                duration_ms: entry['track']['durationMillis'].to_i,
-            )
-
-            spotify_track = playlist.spotify_playlist.spotify_tracks.create(
-                spotify_json: spotify_track.as_json,
-                spotify_id: spotify_track.id,
-                title: spotify_track.name,
-                artist: spotify_track.artists.map(&:name).join(", "),
-                album: spotify_track.album.name,
-                duration_ms: spotify_track.duration_ms,
-            )
-
-            google_track.spotify_track = spotify_track
-            google_track.save!
-          end
-        end
+        create_mirrored_track!(playlist, entry, spotify_track) unless draft_mode?
       end
     end
     unless tracks_to_add_to_spotify.empty?
@@ -194,7 +172,42 @@ class Syncer
     end
 
     # process tracks that were added to the spotify playlist.
-    # TODO: implement
+    added_spotify_tracks = added_spotify_track_ids.map { |id| updated_spotify_tracks.find { |track| track.id == id } }
+    play_track_ids_to_add = []
+    added_google_tracks = []
+    added_spotify_tracks.each do |track|
+      entry = find_track_on_play(track.name, track.artists.map(&:name).join(' '), track.album.name, playlist)
+
+      if entry.nil?
+        warn "couldn't find match for spotify track #{track.name} by #{track.artists}"
+      else
+        play_track_ids_to_add << entry['track']['storeId']
+        added_google_tracks << create_mirrored_track!(playlist, entry, track) unless draft_mode?
+      end
+    end
+    unless play_track_ids_to_add.empty?
+      if draft_mode?
+        puts "detected added spotify tracks: #{added_spotify_tracks.map(&:name)}"
+      else
+        response = playlist.user.play.post('add_entries', playlist_id: playlist.google_id, track_ids: play_track_ids_to_add.join(','))
+        if response['success']
+          response['body']['mutate_response'].each.with_index do |result, index|
+            google_track = added_google_tracks[index]
+            next if google_track.nil?
+
+            if result['response_code'] == 'OK'
+              google_track.update!(google_entry_id: result['id'])
+            else
+              warn "unsuccessful result #{result} from adding track to playlist. track was #{google_track}; removing the local google track"
+              google_track.spotify_track.try(:destroy!)
+              google_track.destroy!
+            end
+          end
+        else
+          raise "weird, couldn't add play tracks. leaving them as-is. response was #{response}"
+        end
+      end
+    end
 
     return nil
   rescue => e
@@ -205,6 +218,40 @@ class Syncer
   def find_track_on_spotify(title, artist, album)
     # TODO: better algorithm
     RSpotify::Track.search("#{title} #{artist}").first
+  end
+
+  def find_track_on_play(title, artist, album, playlist)
+    response = playlist.user.play.post('search', query: "#{title} #{artist}")
+    results = response['results'].select { |result| result['type'].to_i == 1 }
+    results.first
+  end
+
+  def create_mirrored_track!(playlist, google_entry, spotify_track)
+    ActiveRecord::Base.transaction do
+      google_track = playlist.google_tracks.create(
+          google_json: google_entry,
+          google_entry_id: google_entry['id'],
+          google_id: google_entry['track']['id'],
+          title: google_entry['track']['title'],
+          artist: google_entry['track']['artist'],
+          album: google_entry['track']['album'],
+          duration_ms: google_entry['track']['durationMillis'].to_i,
+      )
+
+      spotify_track = playlist.spotify_playlist.spotify_tracks.create(
+          spotify_json: spotify_track.as_json,
+          spotify_id: spotify_track.id,
+          title: spotify_track.name,
+          artist: spotify_track.artists.map(&:name).join(', '),
+          album: spotify_track.album.name,
+          duration_ms: spotify_track.duration_ms,
+      )
+
+      google_track.spotify_track = spotify_track
+      google_track.save!
+
+      google_track
+    end
   end
 end
 
