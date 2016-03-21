@@ -20,7 +20,7 @@ class Syncer
       puts "processing user #{user.id}"
       puts 'loading google play data'
 
-      # load playlist entries for user
+      # we can only pull all playlist entries (i.e. all tracks in all playlists at once) from google
       response = user.play.get('playlist_entries')
       unorganized_entries = response['entries']
 
@@ -34,6 +34,7 @@ class Syncer
 
       puts 'done loading play data'
 
+      # we get tracks back from google totally unsorted by which playlist they belong to
       unorganized_entries.each do |entry|
         playlist_id = entry['playlistId']
         playlist = playlists.find_by(google_id: playlist_id)
@@ -68,8 +69,7 @@ class Syncer
   end
 
   def sync_playlist_returning_error(playlist, entries, all_spotify_playlists)
-    # first ensure a companion spotify playlist exists
-    # TODO: make this treat a spotify playlist with the same name as a companion playlist automatically
+    # first ensure a companion spotify playlist exists (prefer to use a pre-existing one with the same name--allows us to sync Discover Weekly, etc. :D)
     puts "syncing playlist #{playlist.name}"
     if playlist.spotify_playlist.nil?
       rspotify_playlist = all_spotify_playlists.find { |spotify_playlist| spotify_playlist.name == playlist.name }
@@ -91,12 +91,10 @@ class Syncer
 
     raise if playlist.spotify_playlist.nil?
 
-    # all_tracks defined below
     updated_spotify_tracks = rspotify_playlist.all_tracks
 
-    # now check for changes from the last time we synced both the google and spotify playlists
+    # we have tracks in a couple different formats, so we'll consolidate them into lists of ids
     updated_google_track_ids = Set.new(entries.map { |entry| entry['track']['id'] || entry['track']['storeId'] })
-    puts
     old_google_track_ids = Set.new(playlist.google_tracks.map(&:google_id))
     updated_spotify_track_ids = Set.new(updated_spotify_tracks.map(&:id))
     old_spotify_track_ids = Set.new(playlist.spotify_playlist.spotify_tracks.map(&:spotify_id))
@@ -104,6 +102,7 @@ class Syncer
     puts "found #{updated_google_track_ids.count} tracks in google playlist; had #{old_google_track_ids.count} tracks before"
     puts "found #{updated_spotify_track_ids.count} tracks in spotify playlist; had #{old_spotify_track_ids.count} tracks before"
 
+    # ruby set math literally makes me happy
     added_google_track_ids = updated_google_track_ids - old_google_track_ids
     removed_google_track_ids = old_google_track_ids - updated_google_track_ids
     added_spotify_track_ids = updated_spotify_track_ids - old_spotify_track_ids
@@ -112,7 +111,7 @@ class Syncer
     puts "found #{added_google_track_ids.count} added to google, #{removed_google_track_ids.count} removed from google,"
     puts "#{added_spotify_track_ids.count} added to spotify, #{removed_spotify_track_ids.count} removed from spotify,"
 
-    # Special exception for if you're not the author of the spotify playlist: don't try to modify the spotify playlist
+    # special exception for if you're not the author of the spotify playlist: don't try to modify the spotify playlist
     if playlist.user.spotify_id != playlist.spotify_playlist.spotify_author_id
       removed_google_track_ids = []
       added_google_track_ids = []
@@ -120,8 +119,8 @@ class Syncer
 
     # process tracks that were removed from the google playlist
     tracks_to_remove_from_spotify = []
-    # implied that removed_google_track was in playlist.google_tracks before
     removed_google_tracks = removed_google_track_ids.map { |id| playlist.google_tracks.find_by(google_id: id) }.compact
+
     removed_google_tracks.each do |google_track|
       if google_track.spotify_track.present?
         tracks_to_remove_from_spotify << google_track.spotify_track.spotify_json['uri']
@@ -129,6 +128,7 @@ class Syncer
         warn "weird, removed google track #{google_track} had no spotify track"
       end
     end
+
     if draft_mode?
       puts "google tracks were detected as removed: #{removed_google_tracks.map(&:title)}"
       puts "with companion spotify tracks #{tracks_to_remove_from_spotify}"
@@ -143,9 +143,11 @@ class Syncer
     # process tracks that were removed from the spotify playlist
     # (implied that these track were in spotify_playlist.spotify_tracks before)
     entry_ids_to_remove = []
+
     removed_spotify_tracks = removed_spotify_track_ids.map do |removed_spotify_track_id|
       playlist.spotify_playlist.spotify_tracks.find_by(spotify_id: removed_spotify_track_id)
     end.compact # note the .compact here!
+
     removed_spotify_tracks.each do |spotify_track|
       if spotify_track.google_track.present?
         entry_ids_to_remove << spotify_track.google_track.google_entry_id
@@ -153,6 +155,7 @@ class Syncer
         warn "weird, removed spotify track #{spotify_track} had no google track"
       end
     end
+
     unless entry_ids_to_remove.empty?
       if draft_mode?
         puts "spotify tracks were detected as removed: #{removed_spotify_tracks.map(&:title)}"
@@ -171,7 +174,7 @@ class Syncer
 
     # process tracks that were added to the google playlist.
     tracks_to_add_to_spotify = []
-    # added_google_track_ids were all in entries before :D
+    # we have to finagle the track ids on google play because synced songs and store-bought/all-access songs have different id fields (thus the 'id' || 'storeId' here and above)
     added_google_entries = added_google_track_ids.map { |id| entries.find { |entry| entry['track']['id'] == id || entry['track']['storeId'] == id } }
     added_google_entries.each do |entry|
       title = entry['track']['title']
@@ -187,6 +190,7 @@ class Syncer
         create_mirrored_track!(playlist, entry, spotify_track) unless draft_mode?
       end
     end
+
     unless tracks_to_add_to_spotify.empty?
       if draft_mode?
         puts "detected added google tracks: #{added_google_entries.map { |entry| entry['track']['title'] }}"
@@ -210,6 +214,7 @@ class Syncer
         added_google_tracks << create_mirrored_track!(playlist, entry, track) unless draft_mode?
       end
     end
+
     unless play_track_ids_to_add.empty?
       if draft_mode?
         puts "detected added spotify tracks: #{added_spotify_tracks.map(&:name)}"
@@ -239,9 +244,7 @@ class Syncer
     return e
   end
 
-
   def find_track_on_spotify(title, artist, album)
-    # TODO: better algorithm
     results = RSpotify::Track.search("#{title.for_replacement} #{artist.for_replacement}")
     return nil if results.empty?
 
@@ -300,6 +303,7 @@ class Syncer
   end
 end
 
+# extension methods on String to make the track scoring easier
 class String
   def for_replacement
     gsub(/[\(\)\[\]\{\}]+/, ' ').gsub(/\s+/, ' ')
@@ -321,6 +325,7 @@ class String
   end
 end
 
+# extension methods on RSpotify to allow us to inline a few things the gem makes very inconvenient by default
 module RSpotify
   class Playlist
     TRACKS_AT_A_TIME = 100
