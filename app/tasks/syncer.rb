@@ -135,7 +135,7 @@ class Syncer
     else
       unless tracks_to_remove_from_spotify.empty?
         rspotify_playlist.remove_tracks_by_uri! tracks_to_remove_from_spotify
-        removed_google_tracks.map(&:spotify_track).compact.each(&:destroy!)
+        # removed_google_tracks.map(&:spotify_track).compact.each(&:destroy!)
         removed_google_tracks.each(&:destroy!)
       end
     end
@@ -164,7 +164,7 @@ class Syncer
         result = playlist.user.play.post('remove_entries', entry_ids: entry_ids_to_remove.join(','))
         if result['success']
           p result
-          removed_spotify_tracks.map(&:google_track).compact.each(&:destroy!)
+          # removed_spotify_tracks.map(&:google_track).compact.each(&:destroy!)
           removed_spotify_tracks.each(&:destroy!)
         else
           raise "weird, couldn't remove play tracks. leaving them as-is. response was #{result}"
@@ -229,7 +229,7 @@ class Syncer
               google_track.update!(google_entry_id: result['id'])
             else
               warn "unsuccessful result #{result} from adding track to playlist. track was #{google_track}; removing the local google track"
-              google_track.spotify_track.try(:destroy!)
+              # google_track.spotify_track.try(:destroy!)
               google_track.destroy!
             end
           end
