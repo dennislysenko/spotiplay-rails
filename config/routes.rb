@@ -14,4 +14,6 @@ Rails.application.routes.draw do
     get 'login_spotify', on: :collection
     post 'authenticate_google', on: :collection
   end
+
+  mount Sidekiq::Web => '/admin/sidekiq'
 end
