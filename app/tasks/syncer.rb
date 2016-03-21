@@ -24,7 +24,7 @@ class Syncer
       response = user.play.get('playlist_entries')
       unorganized_entries = response['entries']
 
-      playlists_to_entries = {} # playlists to arrays of their entries
+      playlists_to_entries = Hash[playlists.zip([[]] * playlists.count)]
 
       all_tracks_response = user.play.get('all_tracks')
       all_tracks = all_tracks_response['entries']
@@ -42,7 +42,6 @@ class Syncer
 
         next if playlist.nil? # not sure, but we're dealing with an undocumented API here so let's just be safe...
 
-        playlists_to_entries[playlist] ||= []
         playlists_to_entries[playlist] << entry
       end
 
@@ -50,8 +49,9 @@ class Syncer
 
       # all entries should have a track object with metadata now :D
 
+      all_playlists = user.rspotify.all_playlists
       playlists_to_entries.each do |playlist, entries|
-        error = sync_playlist_returning_error(playlist, entries)
+        error = sync_playlist_returning_error(playlist, entries, all_playlists)
 
         if error.present?
           errors << error
@@ -62,27 +62,32 @@ class Syncer
     raise errors.first unless errors.empty? # TODO: raise all the errors
   end
 
-  def sync_playlist_returning_error(playlist, entries)
-    # quickly just make sure the user is authed on rspotify
-    playlist.user.rspotify
-
+  def sync_playlist_returning_error(playlist, entries, all_spotify_playlists)
     # first ensure a companion spotify playlist exists
     # TODO: make this treat a spotify playlist with the same name as a companion playlist automatically
     puts "syncing playlist #{playlist.name}"
     if playlist.spotify_playlist.nil?
-      rspotify_playlist = playlist.user.rspotify.create_playlist!(playlist.name)
+      rspotify_playlist = all_spotify_playlists.find { |spotify_playlist| spotify_playlist.name == playlist.name }
+
+      if rspotify_playlist.nil?
+        puts 'creating new spotify playlist'
+        rspotify_playlist = playlist.user.rspotify.create_playlist!(playlist.name)
+      end
+
       playlist.spotify_playlist = playlist.user.spotify_playlists.create!(
           name: rspotify_playlist.name,
+          spotify_author_id: rspotify_playlist.owner.id,
           spotify_id: rspotify_playlist.id
       )
       playlist.save!
-      puts 'made spotify playlist'
+    else
+      rspotify_playlist = all_spotify_playlists.find { |list| list.id == playlist.spotify_playlist.spotify_id }
     end
 
     raise if playlist.spotify_playlist.nil?
 
     # all_tracks defined below
-    updated_spotify_tracks = playlist.spotify_playlist.rspotify.all_tracks
+    updated_spotify_tracks = rspotify_playlist.all_tracks
 
     # now check for changes from the last time we synced both the google and spotify playlists
     updated_google_track_ids = Set.new(entries.map { |entry| entry['track']['id'] })
@@ -94,6 +99,12 @@ class Syncer
     removed_google_track_ids = old_google_track_ids - updated_google_track_ids
     added_spotify_track_ids = updated_spotify_track_ids - old_spotify_track_ids
     removed_spotify_track_ids = old_spotify_track_ids - updated_spotify_track_ids
+
+    # Special exception for if you're not the author of the spotify playlist: don't try to modify the spotify playlist
+    if playlist.user.spotify_id != playlist.spotify_playlist.spotify_author_id
+      removed_google_track_ids = []
+      added_google_track_ids = []
+    end
 
     # process tracks that were removed from the google playlist
     tracks_to_remove_from_spotify = []
@@ -110,9 +121,11 @@ class Syncer
       puts "google tracks were detected as removed: #{removed_google_tracks.map(&:title)}"
       puts "with companion spotify tracks #{tracks_to_remove_from_spotify}"
     else
-      playlist.spotify_playlist.rspotify.remove_tracks_by_uri! tracks_to_remove_from_spotify
-      removed_google_tracks.map(&:spotify_track).compact.each(&:destroy!)
-      removed_google_tracks.each(&:destroy!)
+      unless tracks_to_remove_from_spotify.empty?
+        rspotify_playlist.remove_tracks_by_uri! tracks_to_remove_from_spotify
+        removed_google_tracks.map(&:spotify_track).compact.each(&:destroy!)
+        removed_google_tracks.each(&:destroy!)
+      end
     end
 
     # process tracks that were removed from the spotify playlist
@@ -166,7 +179,7 @@ class Syncer
       if draft_mode?
         puts "detected added google tracks: #{added_google_entries.map { |entry| entry['track']['title'] }}"
       else
-        playlist.spotify_playlist.rspotify.add_tracks!(tracks_to_add_to_spotify)
+        rspotify_playlist.add_tracks!(tracks_to_add_to_spotify)
         puts 'added to spotify playlist'
       end
     end
@@ -176,7 +189,7 @@ class Syncer
     play_track_ids_to_add = []
     added_google_tracks = []
     added_spotify_tracks.each do |track|
-      entry = find_track_on_play(track.name, track.artists.map(&:name).join(' '), track.album.name, playlist)
+      entry = find_track_on_play(track.name, track.artists.first.name, track.album.name, playlist)
 
       if entry.nil?
         warn "couldn't find match for spotify track #{track.name} by #{track.artists}"
@@ -222,6 +235,8 @@ class Syncer
 
   def find_track_on_play(title, artist, album, playlist)
     response = playlist.user.play.post('search', query: "#{title} #{artist}")
+    raise "invalid response #{response}" unless response['success']
+    return nil unless response['results'].present?
     results = response['results'].select { |result| result['type'].to_i == 1 }
     results.first
   end
@@ -242,7 +257,7 @@ class Syncer
           spotify_json: spotify_track.as_json,
           spotify_id: spotify_track.id,
           title: spotify_track.name,
-          artist: spotify_track.artists.map(&:name).join(', '),
+          artist: spotify_track.artists.first.name,
           album: spotify_track.album.name,
           duration_ms: spotify_track.duration_ms,
       )
@@ -294,6 +309,29 @@ module RSpotify
       @snapshot_id = JSON.parse(response)['snapshot_id']
       @tracks_cache = nil
       self
+    end
+  end
+
+  class User
+    PLAYLISTS_AT_A_TIME = 20
+
+    def all_playlists
+      all_playlists = []
+      offset = 0
+      loop do
+        iter_playlists = playlists(limit: PLAYLISTS_AT_A_TIME, offset: offset)
+        all_playlists.concat(iter_playlists)
+
+        if iter_playlists.count == PLAYLISTS_AT_A_TIME
+          offset += PLAYLISTS_AT_A_TIME
+          # got 20 playlists so almost definitely another page of playlists, let's go get more
+        else
+          # less than 20 playlists means last page probably, so leave the loop
+          break
+        end
+      end
+
+      all_playlists
     end
   end
 end

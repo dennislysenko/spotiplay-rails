@@ -6,6 +6,6 @@ class SpotifyPlaylist < ActiveRecord::Base
   serialize :spotify_json, JSON
 
   def rspotify
-    @rspotify ||= RSpotify::Playlist.find(user.spotify_id, spotify_id)
+    @rspotify ||= RSpotify::Playlist.find(spotify_author_id, spotify_id)
   end
 end

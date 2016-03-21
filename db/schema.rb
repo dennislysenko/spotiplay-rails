@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160320194514) do
+ActiveRecord::Schema.define(version: 20160321053719) do
 
   create_table "google_playlists", force: :cascade do |t|
     t.string   "google_id"
@@ -53,6 +53,7 @@ ActiveRecord::Schema.define(version: 20160320194514) do
     t.string   "spotify_id"
     t.datetime "created_at",         null: false
     t.datetime "updated_at",         null: false
+    t.string   "spotify_author_id"
   end
 
   add_index "spotify_playlists", ["google_playlist_id"], name: "index_spotify_playlists_on_google_playlist_id"
