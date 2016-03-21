@@ -24,7 +24,10 @@ class Syncer
       response = user.play.get('playlist_entries')
       unorganized_entries = response['entries']
 
-      playlists_to_entries = Hash[playlists.zip([[]] * playlists.count)]
+      playlists_to_entries = {}
+      playlists.each do |playlist|
+        playlists_to_entries[playlist] = []
+      end
 
       all_tracks_response = user.play.get('all_tracks')
       all_tracks = all_tracks_response['entries']
@@ -48,6 +51,8 @@ class Syncer
       puts 'done prepping playlist metadata for sync'
 
       # all entries should have a track object with metadata now :D
+
+      p playlists_to_entries.map { |playlist, entries| [playlist.name, entries.count] }
 
       all_playlists = user.rspotify.all_playlists
       playlists_to_entries.each do |playlist, entries|
@@ -90,15 +95,22 @@ class Syncer
     updated_spotify_tracks = rspotify_playlist.all_tracks
 
     # now check for changes from the last time we synced both the google and spotify playlists
-    updated_google_track_ids = Set.new(entries.map { |entry| entry['track']['id'] })
+    updated_google_track_ids = Set.new(entries.map { |entry| entry['track']['id'] || entry['track']['storeId'] })
+    puts
     old_google_track_ids = Set.new(playlist.google_tracks.map(&:google_id))
     updated_spotify_track_ids = Set.new(updated_spotify_tracks.map(&:id))
     old_spotify_track_ids = Set.new(playlist.spotify_playlist.spotify_tracks.map(&:spotify_id))
+
+    puts "found #{updated_google_track_ids.count} tracks in google playlist; had #{old_google_track_ids.count} tracks before"
+    puts "found #{updated_spotify_track_ids.count} tracks in spotify playlist; had #{old_spotify_track_ids.count} tracks before"
 
     added_google_track_ids = updated_google_track_ids - old_google_track_ids
     removed_google_track_ids = old_google_track_ids - updated_google_track_ids
     added_spotify_track_ids = updated_spotify_track_ids - old_spotify_track_ids
     removed_spotify_track_ids = old_spotify_track_ids - updated_spotify_track_ids
+
+    puts "found #{added_google_track_ids.count} added to google, #{removed_google_track_ids.count} removed from google,"
+    puts "#{added_spotify_track_ids.count} added to spotify, #{removed_spotify_track_ids.count} removed from spotify,"
 
     # Special exception for if you're not the author of the spotify playlist: don't try to modify the spotify playlist
     if playlist.user.spotify_id != playlist.spotify_playlist.spotify_author_id
@@ -160,7 +172,7 @@ class Syncer
     # process tracks that were added to the google playlist.
     tracks_to_add_to_spotify = []
     # added_google_track_ids were all in entries before :D
-    added_google_entries = added_google_track_ids.map { |id| entries.find { |entry| entry['track']['id'] == id } }
+    added_google_entries = added_google_track_ids.map { |id| entries.find { |entry| entry['track']['id'] == id || entry['track']['storeId'] == id } }
     added_google_entries.each do |entry|
       title = entry['track']['title']
       artist = entry['track']['artist']
@@ -264,7 +276,7 @@ class Syncer
       google_track = playlist.google_tracks.create(
           google_json: google_entry,
           google_entry_id: google_entry['id'],
-          google_id: google_entry['track']['id'],
+          google_id: google_entry['track']['id'] || google_entry['track']['storeId'],
           title: google_entry['track']['title'],
           artist: google_entry['track']['artist'],
           album: google_entry['track']['album'],
@@ -290,7 +302,7 @@ end
 
 class String
   def for_replacement
-    gsub(/\W+/, ' ').gsub(/\s+/, ' ')
+    gsub(/[\(\)\[\]\{\}]+/, ' ').gsub(/\s+/, ' ')
   end
 
   def replacement_set
