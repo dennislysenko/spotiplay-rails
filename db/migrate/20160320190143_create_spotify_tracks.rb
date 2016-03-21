@@ -11,5 +11,7 @@ class CreateSpotifyTracks < ActiveRecord::Migration
 
       t.timestamps null: false
     end
+
+    add_reference :google_tracks, :spotify_track, index: true, foreign_key: true
   end
 end
