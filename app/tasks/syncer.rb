@@ -230,7 +230,14 @@ class Syncer
 
   def find_track_on_spotify(title, artist, album)
     # TODO: better algorithm
-    RSpotify::Track.search("#{title} #{artist}").first
+    results = RSpotify::Track.search("#{title.for_replacement} #{artist.for_replacement}")
+    return nil if results.empty?
+
+    scored_results = results.map do |result|
+      Hashie::Mash.new(result: result, score: score(title, result.name, artist, result.artists.first.name, album, result.album))
+    end
+
+    scored_results.max(&:score).result
   end
 
   def find_track_on_play(title, artist, album, playlist)
@@ -238,7 +245,18 @@ class Syncer
     raise "invalid response #{response}" unless response['success']
     return nil unless response['results'].present?
     results = response['results'].select { |result| result['type'].to_i == 1 }
-    results.first
+
+    results.each do |result|
+      result['score'] = score(title, result['track']['title'], artist, result['track']['artist'], album, result['track']['album'])
+    end
+
+    results.max { |result| result['score'] }
+  end
+
+  def score(title, other_title, artist, other_artist, album, other_album, duration_ms=nil, other_duration_ms=nil)
+    title.to_s.replacement_score_against(other_title.to_s) +
+        artist.to_s.replacement_score_against(other_artist.to_s) +
+        album.to_s.replacement_score_against(other_album.to_s)
   end
 
   def create_mirrored_track!(playlist, google_entry, spotify_track)
@@ -267,6 +285,27 @@ class Syncer
 
       google_track
     end
+  end
+end
+
+class String
+  def for_replacement
+    gsub(/\W+/, ' ').gsub(/\s+/, ' ')
+  end
+
+  def replacement_set
+    Set.new(for_replacement.split(' '))
+  end
+
+  def replacement_score_against(other_string)
+    terms = replacement_set
+    other_terms = other_string.replacement_set
+
+    matching_terms = terms.intersection(other_terms)
+    missing_terms = terms - other_terms
+    extra_terms = other_terms - terms
+
+    matching_terms.count - missing_terms.count - extra_terms.count
   end
 end
 
