@@ -3,6 +3,7 @@ class Syncer
   sidekiq_options retry: false
 
   attr_accessor :draft_mode
+  @@performing = false
 
   def draft_mode?
     draft_mode
