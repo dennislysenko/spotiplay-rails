@@ -1,5 +1,6 @@
 class Syncer
   include Sidekiq::Worker
+  sidekiq_options retry: false
 
   attr_accessor :draft_mode
 
