@@ -156,6 +156,8 @@ class Syncer
       end
     end
 
+    # Let's not actually remove spotify tracks yet...
+=begin
     unless entry_ids_to_remove.empty?
       if draft_mode?
         puts "spotify tracks were detected as removed: #{removed_spotify_tracks.map(&:title)}"
@@ -171,6 +173,7 @@ class Syncer
         end
       end
     end
+=end
 
     # process tracks that were added to the google playlist.
     tracks_to_add_to_spotify = []
