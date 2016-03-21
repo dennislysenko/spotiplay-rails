@@ -164,8 +164,8 @@ class Syncer
         result = playlist.user.play.post('remove_entries', entry_ids: entry_ids_to_remove.join(','))
         if result['success']
           p result
-          # removed_spotify_tracks.map(&:google_track).compact.each(&:destroy!)
-          removed_spotify_tracks.each(&:destroy!)
+          removed_spotify_tracks.map(&:google_track).compact.each(&:destroy!)
+          # removed_spotify_tracks.each(&:destroy!)
         else
           raise "weird, couldn't remove play tracks. leaving them as-is. response was #{result}"
         end
