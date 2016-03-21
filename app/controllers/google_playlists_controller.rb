@@ -7,7 +7,7 @@ class GooglePlaylistsController < ApplicationController
     playlists.each do |playlist|
       stored_playlist = stored_playlists.find { |p| p.google_id == playlist['id']}
       attributes = {
-          google_json: playlist,
+          google_json: playlist.to_json,
           name: playlist['name'],
           description: playlist['description'],
       }

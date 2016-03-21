@@ -24,6 +24,10 @@ class User < ActiveRecord::Base
       JSON.parse(RestClient.get("#{ENV['NODE_HOST']}/#{resource}?#{auth.to_query}"))
     end
 
+    def post(resource, payload)
+      JSON.parse(RestClient.post("#{ENV['NODE_HOST']}/#{resource}", payload.merge(auth)))
+    end
+
     private
     def auth
       { email: @user.google_email, password: @user.google_password_encrypted, iv: @user.google_password_iv }

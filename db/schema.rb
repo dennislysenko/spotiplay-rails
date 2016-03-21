@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160319213047) do
+ActiveRecord::Schema.define(version: 20160320194514) do
 
   create_table "google_playlists", force: :cascade do |t|
     t.string   "google_id"
@@ -28,6 +28,23 @@ ActiveRecord::Schema.define(version: 20160319213047) do
   add_index "google_playlists", ["spotify_playlist_id"], name: "index_google_playlists_on_spotify_playlist_id"
   add_index "google_playlists", ["user_id"], name: "index_google_playlists_on_user_id"
 
+  create_table "google_tracks", force: :cascade do |t|
+    t.text     "google_json"
+    t.string   "google_entry_id"
+    t.string   "google_id"
+    t.string   "title"
+    t.string   "artist"
+    t.string   "album"
+    t.integer  "google_playlist_id"
+    t.integer  "spotify_track_id"
+    t.datetime "created_at",         null: false
+    t.datetime "updated_at",         null: false
+    t.integer  "duration_ms"
+  end
+
+  add_index "google_tracks", ["google_playlist_id"], name: "index_google_tracks_on_google_playlist_id"
+  add_index "google_tracks", ["spotify_track_id"], name: "index_google_tracks_on_spotify_track_id"
+
   create_table "spotify_playlists", force: :cascade do |t|
     t.integer  "user_id"
     t.integer  "google_playlist_id"
@@ -40,6 +57,22 @@ ActiveRecord::Schema.define(version: 20160319213047) do
 
   add_index "spotify_playlists", ["google_playlist_id"], name: "index_spotify_playlists_on_google_playlist_id"
   add_index "spotify_playlists", ["user_id"], name: "index_spotify_playlists_on_user_id"
+
+  create_table "spotify_tracks", force: :cascade do |t|
+    t.text     "spotify_json"
+    t.string   "spotify_id"
+    t.string   "title"
+    t.string   "artist"
+    t.string   "album"
+    t.integer  "spotify_playlist_id"
+    t.integer  "google_track_id"
+    t.datetime "created_at",          null: false
+    t.datetime "updated_at",          null: false
+    t.integer  "duration_ms"
+  end
+
+  add_index "spotify_tracks", ["google_track_id"], name: "index_spotify_tracks_on_google_track_id"
+  add_index "spotify_tracks", ["spotify_playlist_id"], name: "index_spotify_tracks_on_spotify_playlist_id"
 
   create_table "users", force: :cascade do |t|
     t.string   "google_email"

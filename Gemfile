@@ -55,6 +55,8 @@ gem 'react-rails', '~> 1.6.0'
 
 gem 'active_model_serializers'
 
+gem 'hashie'
+
 # background jobs
 gem 'sidekiq', '3.5.4'
 gem 'sidekiq-failures', '0.4.5' # for viewing failed jobs in sidekiq web UI

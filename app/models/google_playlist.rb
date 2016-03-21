@@ -1,6 +1,9 @@
 class GooglePlaylist < ActiveRecord::Base
   belongs_to :user
   has_one :spotify_playlist
+  has_many :google_tracks, dependent: :destroy
+
+  serialize :google_json, JSON
 
   scope :to_sync, -> { where should_sync: true }
 
