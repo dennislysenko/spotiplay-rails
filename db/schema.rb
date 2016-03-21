@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160321053719) do
+ActiveRecord::Schema.define(version: 20160321180118) do
 
   create_table "google_playlists", force: :cascade do |t|
     t.string   "google_id"
