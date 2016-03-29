@@ -126,8 +126,8 @@ class Syncer
     puts "found #{added_google_track_ids.count} added to google, #{removed_google_track_ids.count} removed from google,"
     puts "#{added_spotify_track_ids.count} added to spotify, #{removed_spotify_track_ids.count} removed from spotify,"
 
-    # special exception for if you're not the author of the spotify playlist: don't try to modify the spotify playlist
-    if playlist.user.spotify_id != playlist.spotify_playlist.spotify_author_id
+    # special exception for Discover Weekly, who am i kidding
+    if playlist.spotify_playlist.name == 'Discover Weekly' #playlist.user.spotify_id != playlist.spotify_playlist.spotify_author_id
       removed_google_track_ids = []
       added_google_track_ids = []
     end
