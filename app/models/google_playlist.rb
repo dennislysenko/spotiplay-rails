@@ -1,6 +1,6 @@
 class GooglePlaylist < ActiveRecord::Base
   belongs_to :user
-  has_one :spotify_playlist, dependent: :destroy
+  has_one :spotify_playlist, dependent: :nullify
   has_many :google_tracks, dependent: :destroy
 
   serialize :google_json, JSON
