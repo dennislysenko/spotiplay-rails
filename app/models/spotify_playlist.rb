@@ -1,6 +1,6 @@
 class SpotifyPlaylist < ActiveRecord::Base
   belongs_to :user
-  has_one :google_playlist
+  has_one :google_playlist, dependent: :destroy
   has_many :spotify_tracks, dependent: :destroy
 
   serialize :spotify_json, JSON
