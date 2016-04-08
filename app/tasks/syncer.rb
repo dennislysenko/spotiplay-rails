@@ -413,6 +413,6 @@ end
 # schedule this job once a minute
 Sidekiq::Cron::Job.create(
     name: 'Syncer: syncs google play playlists to spotify',
-    cron: '* * * * *',
+    cron: '*/5 * * * *',
     class: 'Syncer'
 )
