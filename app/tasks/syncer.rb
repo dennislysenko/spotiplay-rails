@@ -263,14 +263,14 @@ class Syncer
   end
 
   def find_track_on_spotify(title, artist, album)
-    results = RSpotify::Track.search("#{title.for_replacement} #{artist.for_replacement}")
+    results = RSpotify::Track.search("#{title.for_search} #{artist.for_search}")
     return nil if results.empty?
 
     scored_results = results.map do |result|
-      Hashie::Mash.new(result: result, score: score(title, result.name, artist, result.artists.first.name, album, result.album))
+      Hashie::Mash.new(result: result, score: score(title, result.name, artist, result.artists.first.name, album, result.album.name))
     end
 
-    scored_results.max(&:score).result
+    scored_results.max_by(&:score).result
   end
 
   def find_track_on_play(title, artist, album, playlist)
@@ -283,13 +283,14 @@ class Syncer
       result['score'] = score(title, result['track']['title'], artist, result['track']['artist'], album, result['track']['album'])
     end
 
-    results.max { |result| result['score'] }
+    results.max_by { |result| result['score'] }
   end
 
   def score(title, other_title, artist, other_artist, album, other_album, duration_ms=nil, other_duration_ms=nil)
-    title.to_s.replacement_score_against(other_title.to_s) +
+    # "#{title} #{artist} #{album}".replacement_score_against("#{other_title} #{other_artist} #{other_album}")
+    2 * title.to_s.replacement_score_against(other_title.to_s) +
         artist.to_s.replacement_score_against(other_artist.to_s) +
-        album.to_s.replacement_score_against(other_album.to_s)
+        0.5 * album.to_s.replacement_score_against(other_album.to_s)
   end
 
   def create_mirrored_track!(playlist, google_entry, spotify_track)
@@ -324,7 +325,11 @@ end
 # extension methods on String to make the track scoring easier
 class String
   def for_replacement
-    gsub(/[\(\)\[\]\{\}]+/, ' ').gsub(/\s+/, ' ')
+    gsub(/[\(\)\[\]\{\}]+/, ' ').gsub(/\s+/, ' ').strip
+  end
+
+  def for_search
+    gsub(/\(.*?\)/, ' ').gsub(/\[.*?\]/, ' ').gsub(/f(ea)?t\.?/, ' ').for_replacement
   end
 
   def replacement_set
